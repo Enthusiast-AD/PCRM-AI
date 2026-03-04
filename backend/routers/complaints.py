@@ -30,3 +30,7 @@ def get_complaints(db: Session = Depends(get_db), current_user: User = Depends(g
     if current_user.role == "FieldWorker":
         return db.query(Complaint).filter(Complaint.assigned_to == current_user.id).all()
     return db.query(Complaint).all()
+
+@router.get("/public", response_model=List[ComplaintResponse])
+def get_public_complaints(db: Session = Depends(get_db)):
+    return db.query(Complaint).filter(Complaint.publishedToPublic == True).all()
