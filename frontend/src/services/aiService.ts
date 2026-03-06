@@ -1,5 +1,6 @@
 import { mockTasks, mockWorkers, POLITICIAN } from '@/data/mock';
 import { Task } from '@/types';
+import { apiClient } from './apiClient';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -60,20 +61,150 @@ function getDefaultResponse(message: string): string {
 
 // ---- Public API ----
 
+/**
+ * Send a message to the AI Copilot
+ * Calls: POST /api/v1/copilot/chat
+ */
 export async function sendChatMessage(
   messages: ChatMessage[],
   _context?: Record<string, unknown>
 ): Promise<{ reply: string }> {
-  await delay(1200 + Math.random() * 800);
+  try {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    const messageContent = lastUserMsg?.content || '';
+    
+    const response = await apiClient.sendCopilotMessage(
+      messageContent,
+      messages.map(m => ({ role: m.role, content: m.content })),
+      'general'
+    );
 
-  // Simulate occasional errors (5% chance)
-  if (Math.random() < 0.05) {
-    throw new Error('AI service temporarily unavailable');
+    if (response.data?.response) {
+      return { reply: response.data.response };
+    }
+
+    // Fallback to mock response if API fails
+    await delay(1200 + Math.random() * 800);
+    return { reply: getDefaultResponse(messageContent) };
+  } catch (error) {
+    console.error('Chat error:', error);
+    // Fallback to mock response
+    await delay(1200 + Math.random() * 800);
+    const lastMsg = messages[messages.length - 1]?.content || '';
+    return { reply: getDefaultResponse(lastMsg) };
+  }
+}
+
+/**
+ * Get AI insights for a specific page
+ * Falls back to mock data if real API not available
+ */
+export async function getAIInsights(
+  page: string,
+  _context?: Record<string, unknown>
+): Promise<{ suggestions: string[] }> {
+  await delay(800 + Math.random() * 400);
+
+  const overdue = mockTasks.filter(t => new Date(t.deadline) < new Date() && t.status !== 'completed');
+
+  const insightsMap: Record<string, string[]> = {
+    dashboard: [
+      `You have ${mockTasks.filter(t => t.status === 'awaiting-approval').length} task(s) awaiting your approval — oldest submitted ${mockTasks.find(t => t.status === 'awaiting-approval')?.completedAt || 'recently'}.`,
+      overdue.length > 0
+        ? `⚠️ ${overdue.length} task(s) are past deadline. The Drainage System Repair in Ward 5 is at 0% and needs immediate attention.`
+        : '✅ No overdue tasks — all work is on track.',
+      `Priya Patel is your top performer this month with a 5-day average completion time.`,
+    ],
+    approvals: [
+      `Community Park Development has been pending approval for ${Math.round((Date.now() - new Date('2026-02-22').getTime()) / (1000 * 60 * 60 * 24))} days — consider reviewing soon.`,
+      `Worker Suresh Reddy has a 12-day avg completion time. His previous task was rejected — review this submission carefully.`,
+      `This task includes completion notes — "Playground equipment installed and pathways paved."`,
+    ],
+    'active-works': [
+      overdue.length > 0 ? `🔴 ${overdue.length} task(s) overdue: ${overdue.map(t => t.title).join(', ')}` : '✅ All tasks are on schedule.',
+      `Street Light Installation in Ward 4 is at 40% with a March 10 deadline — may need extra resources.`,
+      `Water Pipeline Extension is progressing well at 65% — on track for March 15 deadline.`,
+    ],
+    analytics: [
+      `Your overall approval rate is ${Math.round((mockTasks.filter(t => t.status === 'completed').length / Math.max(1, mockTasks.filter(t => t.status === 'completed').length + mockTasks.filter(t => t.status === 'rejected').length)) * 100)}% — above constituency average.`,
+      `Ward 1 - Central has the most completed tasks (3). Consider assigning more work to underutilized wards.`,
+      `Average task completion time is trending downward — good sign of improving efficiency.`,
+    ],
+  };
+
+  return { suggestions: insightsMap[page] || insightsMap['dashboard'] };
+}
+
+export async function getTaskAISuggestions(
+  taskId: string
+): Promise<{ suggestions: string[] }> {
+  await delay(600 + Math.random() * 400);
+
+  const task = mockTasks.find(t => t.id === taskId);
+  if (!task) return { suggestions: ['Task not found.'] };
+
+  const worker = mockWorkers.find(w => w.id === task.assignedWorker);
+  const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
+  const daysToDeadline = Math.round((new Date(task.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+  const suggestions: string[] = [];
+
+  if (isOverdue) {
+    suggestions.push(`⚠️ This task is ${Math.abs(daysToDeadline)} days overdue — consider sending a reminder to ${task.assignedWorkerName}.`);
+  } else if (daysToDeadline <= 7 && task.progress < 80) {
+    suggestions.push(`⏰ Deadline in ${daysToDeadline} days but progress is at ${task.progress}% — may need additional support.`);
   }
 
-  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-  const reply = getDefaultResponse(lastUserMsg?.content || '');
-  return { reply };
+  if (worker) {
+    const rate = worker.completedTasks > 0
+      ? Math.round((worker.completedTasks / (worker.completedTasks + worker.activeTasks)) * 100)
+      : 0;
+    suggestions.push(`${worker.name} has a ${rate}% completion rate with avg ${worker.avgCompletionDays || '?'} days per task.`);
+  }
+
+  if (task.status === 'awaiting-approval' && task.workerNotes) {
+    suggestions.push(`Proof submitted with notes: "${task.workerNotes.slice(0, 80)}…" — review and decide.`);
+  }
+
+  if (suggestions.length === 0) {
+    suggestions.push(`This task is progressing normally at ${task.progress}%.`);
+  }
+
+  return { suggestions };
+}
+
+export async function getApprovalAIReview(
+  taskId: string
+): Promise<{ review: string }> {
+  await delay(1000 + Math.random() * 500);
+
+  const task = mockTasks.find(t => t.id === taskId);
+  if (!task) return { review: 'Task not found.' };
+
+  const worker = mockWorkers.find(w => w.id === task.assignedWorker);
+  const completionRate = worker
+    ? Math.round((worker.completedTasks / Math.max(1, worker.completedTasks + worker.activeTasks)) * 100)
+    : 0;
+
+  const daysInProgress = task.completedAt && task.createdAt
+    ? Math.round((new Date(task.completedAt).getTime() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    : '?';
+
+  let review = `Based on the submission, ${task.assignedWorkerName} completed this task in ${daysInProgress} days. `;
+  review += `Worker has a ${completionRate}% historical completion rate (avg ${worker?.avgCompletionDays || '?'} days). `;
+
+  if (task.workerNotes) {
+    review += `Notes indicate: "${task.workerNotes}" `;
+  }
+
+  review += `\n\n**Recommendation:** `;
+  if (completionRate >= 80) {
+    review += `Approve — worker has strong track record and the submission details look complete.`;
+  } else {
+    review += `Review carefully — worker's completion rate (${completionRate}%) suggests some previous issues. Verify proof images if available.`;
+  }
+
+  return { review };
 }
 
 export async function getAIInsights(

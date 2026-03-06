@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/types';
 import { Building2, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 const Login = () => {
-  const [role, setRole] = useState<UserRole>('politician');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,14 +16,15 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      const success = await login(email, password, role);
+      const success = await login(username, password);
       if (success) {
-        navigate(role === 'politician' ? '/politician/dashboard' : '/worker/dashboard');
+        // User role is determined from API response and stored in context
+        navigate('/politician/dashboard');
       } else {
         setError('Invalid credentials');
       }
-    } catch {
-      setError('Login failed. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -44,30 +42,14 @@ const Login = () => {
         </div>
 
         <div className="stat-card">
-          {/* Role selector */}
-          <div className="flex rounded-lg bg-secondary p-1 mb-6">
-            {(['politician', 'worker'] as UserRole[]).map(r => (
-              <button
-                key={r}
-                onClick={() => setRole(r)}
-                className={cn(
-                  'flex-1 py-2 text-sm font-medium rounded-md transition-colors capitalize',
-                  role === r ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Email or Phone</label>
+              <label className="block text-sm font-medium mb-1.5">Phone or Email</label>
               <input
                 type="text"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Enter your email or phone"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Enter your phone number or email"
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               />
@@ -92,12 +74,12 @@ const Login = () => {
               className="w-full bg-primary text-primary-foreground py-2.5 rounded-md font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Sign In as {role === 'politician' ? 'Politician' : 'Worker'}
+              Sign In
             </button>
           </form>
 
           <p className="text-xs text-muted-foreground text-center mt-4">
-            Demo: Enter any credentials to log in
+            Enter your phone number (or email) and password to log in
           </p>
         </div>
       </div>
