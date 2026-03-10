@@ -41,6 +41,27 @@ const Login = () => {
           <p className="text-sm text-muted-foreground mt-1">Sign in to manage constituency work</p>
         </div>
 
+        {/* Demo Credentials Box */}
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+          <p className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-3">Demo Credentials</p>
+          
+          <div className="space-y-3">
+            {/* Politician */}
+            <div className="bg-white dark:bg-blue-900 rounded p-2.5">
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Politician</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Email: <span className="font-mono text-gray-800 dark:text-gray-200">rajesh@example.com</span></p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Password: <span className="font-mono text-gray-800 dark:text-gray-200">password</span></p>
+            </div>
+
+            {/* Worker */}
+            <div className="bg-white dark:bg-blue-900 rounded p-2.5">
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Worker</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Email: <span className="font-mono text-gray-800 dark:text-gray-200">amit@example.com</span></p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Password: <span className="font-mono text-gray-800 dark:text-gray-200">password</span></p>
+            </div>
+          </div>
+        </div>
+
         <div className="stat-card">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
