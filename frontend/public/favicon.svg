@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="cubeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c7d2fe" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background with rounded corners for an app-style icon -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+
+  <!-- The main isometric structure representing "management", "works", & "transparency" -->
+  <!-- Outer Hexagon -->
+  <path d="M256 110 L376 179.3 L376 317.9 L256 387.2 L136 317.9 L136 179.3 Z" 
+        fill="none" stroke="url(#cubeGradient)" stroke-width="28" stroke-linejoin="round" />
+
+  <!-- Inner Connections representing "network" & "system" -->
+  <path d="M256 248.6 L376 179.3" fill="none" stroke="url(#cubeGradient)" stroke-width="28" stroke-linecap="round" />
+  <path d="M256 248.6 L136 179.3" fill="none" stroke="url(#cubeGradient)" stroke-width="28" stroke-linecap="round" />
+  <path d="M256 248.6 L256 387.2" fill="none" stroke="url(#cubeGradient)" stroke-width="28" stroke-linecap="round" />
+
+  <!-- Central Node representing "AI core" -->
+  <circle cx="256" cy="248.6" r="36" fill="#38bdf8" />
+</svg>
