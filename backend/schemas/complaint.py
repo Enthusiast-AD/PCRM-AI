@@ -11,6 +11,7 @@ class ComplaintCreate(BaseModel):
     ward_id: Optional[UUID] = None
     constituency_id: Optional[UUID] = None
     photo_url: Optional[str] = None
+    category: Optional[str] = "Unclassified"
 
 class ComplaintResponse(BaseModel):
     id: UUID

@@ -1,15 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { CATEGORIES, WARDS } from "@/data/mock";
+import { CATEGORIES } from "@/data/mock";
+
+interface Ward {
+  id: string;
+  ward_name: string;
+}
 
 export function ComplaintForm({ onSuccess }: { onSuccess?: () => void }) {
   const [loading, setLoading] = useState(false);
+  const [wards, setWards] = useState<Ward[]>([]);
   const { toast } = useToast();
+  
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/wards`)
+      .then(res => res.json())
+      .then(data => setWards(data))
+      .catch(err => console.error("Failed to fetch wards", err));
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,7 +37,7 @@ export function ComplaintForm({ onSuccess }: { onSuccess?: () => void }) {
       if (file && file.size > 0) {
         const uploadData = new FormData();
         uploadData.append("file", file);
-        const uploadRes = await fetch("http://localhost:8000/api/v1/complaints/upload", {
+        const uploadRes = await fetch(`${API_URL}/api/v1/complaints/upload`, {
           method: "POST",
           body: uploadData,
         });
@@ -33,21 +48,25 @@ export function ComplaintForm({ onSuccess }: { onSuccess?: () => void }) {
       }
 
       const rawText = formData.get("raw_text") as string;
-      const ward = formData.get("ward") as string;
+      const wardId = formData.get("ward") as string;
       const category = formData.get("category") as string;
 
-      const enhancedText = `${rawText}\n\n[Context - Ward: ${ward || 'Not specified'}, Selected Category: ${category || 'Not specified'}]`;
+      const selectedWard = wards.find(w => w.id === wardId);
+      const wardName = selectedWard ? selectedWard.ward_name : 'Not specified';
+
+      const enhancedText = `${rawText}\n\n[Context - Ward: ${wardName}, Selected Category: ${category || 'Not specified'}]`;
 
       const complaintData = {
         citizen_name: formData.get("citizen_name"),
         citizen_phone: formData.get("citizen_phone"),
         channel: "web",
         raw_text: enhancedText,
-        ward_id: null,
+        ward_id: wardId || null,
         photo_url,
+        category: category || "Unclassified",
       };
 
-      const res = await fetch("http://localhost:8000/api/v1/complaints", {
+      const res = await fetch(`${API_URL}/api/v1/complaints`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -93,7 +112,7 @@ export function ComplaintForm({ onSuccess }: { onSuccess?: () => void }) {
           <Select name="ward">
             <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
             <SelectContent>
-              {WARDS.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+              {wards.map(w => <SelectItem key={w.id} value={w.id}>{w.ward_name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
