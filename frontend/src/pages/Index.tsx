@@ -1,27 +1,75 @@
 import { PublicLayout } from '@/layouts/PublicLayout';
 import { StatCard } from '@/components/StatCard';
 import { StatusBadge } from '@/components/StatusBadge';
-import { mockTasks, mockUpdates, WARDS, CATEGORIES } from '@/data/mock';
+import { WARDS, CATEGORIES } from '@/data/mock';
 import { CheckCircle2, Clock, AlertCircle, Users, MapPin, Calendar, Filter, BadgeCheck, FileText } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ComplaintForm } from "@/components/ComplaintForm";
+import { apiClient } from "@/services/apiClient";
+import { Task, TaskStatus } from "@/types";
 
 const Index = () => {
   const [wardFilter, setWardFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [updates, setUpdates] = useState<any[]>([]);
 
-  const completed = mockTasks.filter(t => t.status === 'completed').length;
-  const inProgress = mockTasks.filter(t => t.status === 'in-progress').length;
-  const pending = mockTasks.filter(t => t.status === 'awaiting-approval').length;
-  const total = mockTasks.length;
+  useEffect(() => {
+    const fetchPublicData = async () => {
+      try {
+        const response = await apiClient.getPublicComplaints();
+        if (response.data) {
+          const mappedTasks = response.data.map((c: any) => ({
+            id: c.id,
+            title: c.ticket_id,
+            description: c.ai_overview || c.summary || c.raw_text, // Use AI Overview primarily
+            ward: c.ward_id || 'Unknown',
+            location: c.ward_id || 'Unknown',
+            category: c.category,
+            priority: 'medium', // Default for public view or map if needed
+            status: c.status.toLowerCase() as TaskStatus,
+            ai_overview: c.ai_overview,
+            publishedToPublic: true,
+            completedAt: c.resolved_at ? new Date(c.resolved_at).toLocaleDateString() : undefined,
+            createdAt: c.created_at
+          }));
+          setTasks(mappedTasks);
+
+          // Derive updates from completed tasks or specific logic
+          const recentUpdates = mappedTasks
+            .filter((t: any) => t.status === 'completed')
+            .slice(0, 5)
+            .map((t: any) => ({
+              id: t.id,
+              taskId: t.id,
+              taskTitle: t.title,
+              location: t.location,
+              ward: t.ward,
+              description: t.description,
+              status: t.status,
+              completedAt: t.completedAt,
+              images: []
+            }));
+          setUpdates(recentUpdates);
+        }
+      } catch (error) {
+        console.error("Failed to fetch public data:", error);
+      }
+    };
+    fetchPublicData();
+  }, []);
+
+  const completed = tasks.filter(t => t.status === 'completed').length;
+  const inProgress = tasks.filter(t => t.status === 'in-progress').length;
+  const pending = tasks.filter(t => t.status === 'awaiting-approval').length;
+  const total = tasks.length;
 
   // Only show published tasks on public dashboard
-  const publicTasks = mockTasks.filter(t => t.publishedToPublic);
-  const filteredTasks = publicTasks.filter(t => {
+  const filteredTasks = tasks.filter(t => {
     if (wardFilter !== 'all' && t.ward !== wardFilter) return false;
     if (categoryFilter !== 'all' && t.category !== categoryFilter) return false;
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
@@ -77,11 +125,11 @@ const Index = () => {
       {/* Latest Updates */}
       <section id="updates" className="container mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold mb-6">Latest Approved Updates</h2>
-        {mockUpdates.length === 0 ? (
+        {updates.length === 0 ? (
           <p className="text-muted-foreground">No updates yet.</p>
         ) : (
           <div className="space-y-4">
-            {mockUpdates.map(update => (
+            {updates.map(update => (
               <div key={update.id} className="stat-card">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="flex-1">
@@ -94,6 +142,13 @@ const Index = () => {
                       <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{update.completedAt}</span>
                     </div>
                     <p className="mt-2 text-sm">{update.description}</p>
+                    {update.images && update.images.length > 0 && (
+                      <div className="mt-2 flex gap-2">
+                        {update.images.map((img: string, i: number) => (
+                           <img key={i} src={img} alt="update" className="h-20 w-20 object-cover rounded" />
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 text-xs font-medium shrink-0" style={{ color: 'hsl(152, 60%, 40%)' }}>
                     <BadgeCheck className="h-4 w-4" />

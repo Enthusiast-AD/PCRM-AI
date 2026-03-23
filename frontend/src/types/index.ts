@@ -52,6 +52,15 @@ export interface Task {
   publishedToPublic: boolean;
   activityLog?: ActivityLogEntry[];
   attachments?: FileAttachment[];
+  
+  // AI fields
+  ai_overview?: string;
+  suggested_action?: string;
+  suggested_assignee_role?: string;
+  subcategory?: string;
+  priority_reason?: string;
+  ticket_id?: string;
+  raw_text?: string;
 }
 
 export interface Worker {

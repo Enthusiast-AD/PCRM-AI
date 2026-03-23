@@ -98,15 +98,55 @@ class ApiClient {
    * POST /api/v1/complaints
    * Create a new complaint
    */
-  async createComplaint(complaintData: {
-    citizen_phone?: string;
-    category: string;
-    description: string;
-    priority?: number;
-    ward_id?: string;
-    constituency_id?: string;
-    channel?: 'web' | 'whatsapp' | 'sms';
-  }) {
+  async createComplaint(complaintData: any) {
+    return this.request('/api/v1/complaints', 'POST', complaintData);
+  }
+
+  /**
+   * GET /api/v1/complaints
+   * Get complaints (filtered by role on backend)
+   */
+  async getComplaints() {
+    return this.request('/api/v1/complaints', 'GET');
+  }
+
+  /**
+   * GET /api/v1/complaints/public
+   * Get public complaints
+   */
+  async getPublicComplaints() {
+    return this.request('/api/v1/complaints/public', 'GET');
+  }
+
+  /**
+   * POST /api/v1/complaints/upload
+   * Upload image
+   */
+  async uploadImage(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Custom fetch because request method assumes JSON body
+    const response = await fetch(`${API_BASE_URL}/api/v1/complaints/upload`, {
+      method: 'POST',
+      headers: {
+        ...(localStorage.getItem('auth_token') ? { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` } : {}),
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+       throw new Error('Upload failed');
+    }
+    return await response.json();
+  }
+
+  // ============ COMPLAINTS ENDPOINTS ============
+  /**
+   * POST /api/v1/complaints
+   * Create a new complaint
+   */
+  async createComplaint(complaintData: any) {
     return this.request('/api/v1/complaints', 'POST', complaintData);
   }
 

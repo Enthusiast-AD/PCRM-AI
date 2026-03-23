@@ -10,7 +10,10 @@ const statusConfig: Record<TaskStatus, { label: string; className: string }> = {
 };
 
 export function StatusBadge({ status, className }: { status: TaskStatus; className?: string }) {
-  const config = statusConfig[status];
+  // Gracefully handle undefined or unknown statuses
+  const safeStatus = (status || 'new').toLowerCase() as TaskStatus;
+  const config = statusConfig[safeStatus] || statusConfig['new'];
+  
   return (
     <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', config.className, className)}>
       {config.label}

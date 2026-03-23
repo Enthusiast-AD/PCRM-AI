@@ -1,32 +1,81 @@
 import { PoliticianLayout } from '@/layouts/PoliticianLayout';
 import { StatCard } from '@/components/StatCard';
-import { mockTasks, WARDS } from '@/data/mock';
+import { WARDS } from '@/data/mock';
 import { ClipboardList, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AIInsightsCard } from '@/components/ai/AIInsightsCard';
 import { useAIChat } from '@/contexts/AIChatContext';
+import { useEffect, useState } from 'react';
+import { apiClient } from '@/services/apiClient';
+import { Task, TaskPriority, TaskStatus } from '@/types';
 
 const STATUS_COLORS = ['hsl(220,10%,58%)', 'hsl(210,80%,52%)', 'hsl(33,90%,55%)', 'hsl(152,60%,40%)', 'hsl(0,72%,51%)'];
 
 const PoliticianDashboard = () => {
   const { openChat } = useAIChat();
-  const totalTasks = mockTasks.length;
-  const inProgress = mockTasks.filter(t => t.status === 'in-progress').length;
-  const pending = mockTasks.filter(t => t.status === 'awaiting-approval').length;
-  const completed = mockTasks.filter(t => t.status === 'completed').length;
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      try {
+        const response = await apiClient.getComplaints();
+        if (response.data) {
+          const mappedTasks = response.data.map((c: any) => ({
+            id: c.id,
+            title: c.ticket_id,
+            description: c.summary || c.raw_text,
+            ward: c.ward_id || 'Unknown', // Ideally fetch ward name
+            location: c.ward_id || 'Unknown',
+            category: c.category,
+            priority: mapPriority(c.priority),
+            status: c.status.toLowerCase() as TaskStatus,
+            ai_overview: c.ai_overview,
+            suggested_action: c.suggested_action,
+            subcategory: c.subcategory,
+            priority_reason: c.priority_reason,
+            publishedToPublic: c.publishedToPublic || false,
+            createdAt: c.created_at,
+            updatedAt: c.updated_at,
+            assignment: c.assigned_to
+          }));
+          setTasks(mappedTasks);
+        }
+      } catch (error) {
+        console.error("Failed to fetch complaints:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchComplaints();
+  }, []);
+
+  const mapPriority = (p: number): TaskPriority => {
+    if (p >= 5) return 'urgent';
+    if (p === 4) return 'high';
+    if (p === 3) return 'medium';
+    return 'low';
+  };
+
+  const totalTasks = tasks.length;
+  const inProgress = tasks.filter(t => t.status === 'in-progress').length;
+  const pending = tasks.filter(t => t.status === 'awaiting-approval').length;
+  const completed = tasks.filter(t => t.status === 'completed').length;
 
   const statusData = [
-    { name: 'New', value: mockTasks.filter(t => t.status === 'new').length },
+    { name: 'New', value: tasks.filter(t => t.status === 'new').length },
     { name: 'In Progress', value: inProgress },
     { name: 'Awaiting', value: pending },
     { name: 'Completed', value: completed },
-    { name: 'Rejected', value: mockTasks.filter(t => t.status === 'rejected').length },
+    { name: 'Rejected', value: tasks.filter(t => t.status === 'rejected').length },
   ].filter(d => d.value > 0);
 
   const wardData = WARDS.map(w => ({
     name: w.replace('Ward ', 'W').split(' - ')[0],
-    tasks: mockTasks.filter(t => t.ward === w).length,
+    tasks: tasks.filter(t => t.ward === w).length, // Note: backend returns ID, frontend mock uses name. Need to align this eventually.
   }));
+
 
   return (
     <PoliticianLayout>
