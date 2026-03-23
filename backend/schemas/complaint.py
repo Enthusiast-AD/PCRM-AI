@@ -21,10 +21,21 @@ class ComplaintResponse(BaseModel):
     channel: str
     raw_text: str
     category: str
+    subcategory: Optional[str] = None
     priority: int
+    priority_reason: Optional[str] = None
     status: str
     assigned_to: Optional[UUID]
+    ward_id: Optional[UUID] = None
     created_at: datetime
+    summary: Optional[str] = None
+    ai_overview: Optional[str] = None
+    suggested_action: Optional[str] = None
+    suggested_assignee_role: Optional[str] = None
+    ai_draft_reply: Optional[str] = None
+    language: Optional[str] = None
+    tags: Optional[List[str]] = []
+    photo_url: Optional[str] = None
 
     class Config:
         from_attributes = True

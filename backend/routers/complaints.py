@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from utils.database import get_db
 from utils.dependencies import get_current_user, require_role
+from services.ai_service import classify_complaint_task
 from models.complaint import Complaint
 from models.user import User
 from schemas.complaint import ComplaintCreate, ComplaintResponse
@@ -24,7 +25,10 @@ def create_complaint(complaint: ComplaintCreate, db: Session = Depends(get_db)):
     db.add(new_complaint)
     db.commit()
     db.refresh(new_complaint)
-    # TODO: Trigger Celery task for AI classification here
+    
+    # Trigger Celery task for AI classification
+    classify_complaint_task.delay(str(new_complaint.id), new_complaint.raw_text, new_complaint.channel)
+    
     return new_complaint
 
 @router.post("/upload")
