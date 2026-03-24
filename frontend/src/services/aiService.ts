@@ -49,14 +49,16 @@ const MOCK_RESPONSES: Record<string, string> = {
   'feedback': `Here's a template you can use for rejection feedback:\n\n---\n\n**Task:** [Task Name]\n**Decision:** Requires Revision\n\nDear [Worker Name],\n\nThank you for your work on this task. After review, I've identified the following areas that need attention before approval:\n\n1. **[Specific issue]** — [What needs to change]\n2. **[Missing documentation]** — [What's needed]\n\nPlease address these points and resubmit. Feel free to reach out if you need clarification.\n\nRegards,\n${POLITICIAN.name}\n\n---\n\nWould you like me to customize this for a specific task?`,
 };
 
-function getDefaultResponse(message: string): string {
+function getDefaultResponse(message: string, detailed = false): string {
   const lower = message.toLowerCase();
-  if (lower.includes('overdue') || lower.includes('urgent') || lower.includes('delayed')) return MOCK_RESPONSES['overdue'];
-  if (lower.includes('approval') || lower.includes('pending') || lower.includes('approve')) return MOCK_RESPONSES['approval'];
-  if (lower.includes('perform') || lower.includes('worker') || lower.includes('team')) return MOCK_RESPONSES['performance'];
-  if (lower.includes('feedback') || lower.includes('reject') || lower.includes('write')) return MOCK_RESPONSES['feedback'];
 
-  return `Based on your constituency data, here's a quick summary:\n\n📊 **${mockTasks.length} total tasks** across 5 wards\n- ${mockTasks.filter(t => t.status === 'in-progress').length} in progress\n- ${mockTasks.filter(t => t.status === 'awaiting-approval').length} awaiting your approval\n- ${mockTasks.filter(t => t.status === 'completed').length} completed\n\nYour top priorities today:\n1. Review the pending Community Park approval\n2. Follow up on the Drainage System Repair (0% progress, past deadline)\n3. Check Street Light Installation progress (deadline approaching)\n\nWould you like details on any of these?`;
+  if (detailed || lower.includes('overdue') || lower.includes('urgent') || lower.includes('delayed')) return MOCK_RESPONSES['overdue'];
+  if (detailed || lower.includes('approval') || lower.includes('pending') || lower.includes('approve')) return MOCK_RESPONSES['approval'];
+  if (detailed || lower.includes('perform') || lower.includes('team')) return MOCK_RESPONSES['performance'];
+  if (detailed || lower.includes('feedback') || lower.includes('reject') || lower.includes('write')) return MOCK_RESPONSES['feedback'];
+
+  // Short default
+  return `You have ${mockTasks.filter(t => t.status === 'in-progress').length} tasks in progress and ${mockTasks.filter(t => t.status === 'awaiting-approval').length} awaiting approval. Ask me about overdue tasks, worker performance, or pending approvals for details.`;
 }
 
 // ---- Public API ----
@@ -72,10 +74,23 @@ export async function sendChatMessage(
   try {
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     const messageContent = lastUserMsg?.content || '';
+
+    // Determine if user is requesting detail
+    const wantsDetail = /\b(detail|explain|full|list|elaborate|describe|breakdown|summarize)\b/i.test(messageContent);
+
+    // System instruction for conciseness injected as history prefix
+    const systemInstruction = wantsDetail
+      ? 'You are a helpful AI assistant for a politician dashboard. The user is requesting detailed information — provide a thorough, structured response.'
+      : 'You are a helpful AI assistant for a politician dashboard. Be concise and conversational. Reply in 2-4 short sentences unless the user asks for details or uses words like explain, list, or describe. Do not include unsolicited bullet points or headers.';
+
+    const historyWithSystem = [
+      { role: 'assistant' as const, content: systemInstruction },
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+    ];
     
     const response = await apiClient.sendCopilotMessage(
       messageContent,
-      messages.map(m => ({ role: m.role, content: m.content })),
+      historyWithSystem,
       'general'
     );
 
@@ -85,13 +100,13 @@ export async function sendChatMessage(
 
     // Fallback to mock response if API fails
     await delay(1200 + Math.random() * 800);
-    return { reply: getDefaultResponse(messageContent) };
+    return { reply: getDefaultResponse(messageContent, wantsDetail) };
   } catch (error) {
     console.error('Chat error:', error);
-    // Fallback to mock response
     await delay(1200 + Math.random() * 800);
     const lastMsg = messages[messages.length - 1]?.content || '';
-    return { reply: getDefaultResponse(lastMsg) };
+    const wantsDetail = /\b(detail|explain|full|list|elaborate|describe|breakdown|summarize)\b/i.test(lastMsg);
+    return { reply: getDefaultResponse(lastMsg, wantsDetail) };
   }
 }
 

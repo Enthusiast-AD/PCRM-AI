@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ClipboardList, LogOut, Building2, User, Bell } from 'lucide-react';
+import { ClipboardList, Building2, Bell, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function WorkerLayout({ children }: { children: ReactNode }) {
@@ -25,13 +25,9 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
             </div>
             <div>
               <p className="text-sm font-bold">Worker Portal</p>
-              <p className="text-xs opacity-70">{user?.name} · {user?.ward}</p>
+              <p className="text-xs opacity-70">{user?.name}</p>
             </div>
           </div>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-sm opacity-80 hover:opacity-100 transition-opacity">
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
         </div>
       </header>
 
@@ -63,14 +59,14 @@ export function WorkerLayout({ children }: { children: ReactNode }) {
           Updates
         </Link>
         <Link
-          to="/worker/dashboard"
+          to="/worker/settings"
           className={cn(
             'flex-1 flex flex-col items-center py-3 text-xs gap-0.5',
-            'text-muted-foreground'
+            location.pathname === '/worker/settings' ? 'text-primary font-semibold' : 'text-muted-foreground'
           )}
         >
-          <User className="h-5 w-5" />
-          Profile
+          <Settings className="h-5 w-5" />
+          Settings
         </Link>
       </nav>
     </div>
