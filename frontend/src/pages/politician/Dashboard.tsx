@@ -1,7 +1,9 @@
 import { PoliticianLayout } from '@/layouts/PoliticianLayout';
 import { StatCard } from '@/components/StatCard';
 import { WARDS } from '@/data/mock';
-import { ClipboardList, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, Clock, AlertCircle, CheckCircle2, MapPin, Calendar, User, Sparkles } from 'lucide-react';
+import { StatusBadge } from '@/components/StatusBadge';
+import { PriorityBadge } from '@/components/PriorityBadge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { AIInsightsCard } from '@/components/ai/AIInsightsCard';
 import { useAIChat } from '@/contexts/AIChatContext';
@@ -125,6 +127,48 @@ const PoliticianDashboard = () => {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
+
+        {/* Recent Complaints List */}
+        <div className="mt-8 space-y-4">
+          <h2 className="text-xl font-bold">Recent Complaints</h2>
+          {loading ? <p>Loading complaints...</p> : tasks.length === 0 ? <p className="text-muted-foreground">No recent complaints found.</p> : 
+            [...tasks].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5).map(task => (
+            <div key={task.id} className="stat-card">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <h3 className="font-semibold">{task.title}</h3>
+                    <StatusBadge status={task.status} />
+                    <PriorityBadge priority={task.priority} />
+                    <span className="text-xs px-2 py-0.5 bg-secondary rounded-full text-secondary-foreground">
+                      {task.category}
+                    </span>
+                  </div>
+                  
+                  {/* AI Overview Section */}
+                  {task.ai_overview && (
+                    <div className="mb-3 bg-accent/10 p-3 rounded-md border border-accent/20">
+                      <div className="flex items-center gap-1.5 text-accent font-medium text-sm mb-1">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        AI Overview
+                      </div>
+                      <p className="text-sm text-foreground/90">{task.ai_overview}</p>
+                    </div>
+                  )}
+
+                  {!task.ai_overview && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{task.description}</p>
+                  )}
+
+                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{task.ward}</span>
+                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(task.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </PoliticianLayout>

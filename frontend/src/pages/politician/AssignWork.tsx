@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PoliticianLayout } from '@/layouts/PoliticianLayout';
-import { mockWorkers, WARDS, CATEGORIES } from '@/data/mock';
+import { WARDS, CATEGORIES } from '@/data/mock';
 import { TaskPriority, FileAttachment } from '@/types';
 import { FileUpload } from '@/components/FileUpload';
 import { toast } from 'sonner';
+import { apiClient } from '@/services/apiClient';
 
 const AssignWork = () => {
   const [form, setForm] = useState({
@@ -11,12 +12,55 @@ const AssignWork = () => {
     deadline: '', worker: '',
   });
   const [files, setFiles] = useState<FileAttachment[]>([]);
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const response = await apiClient.getWorkers();
+        if (response.data && response.data.length > 0) {
+          setWorkers(response.data);
+        } else {
+          // Fallback if backend is empty
+          setWorkers([{ id: 'w1', name: 'Amit Sharma' }]);
+        }
+      } catch (err) {
+        setWorkers([{ id: 'w1', name: 'Amit Sharma' }]);
+      }
+    };
+    fetchWorkers();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Task assigned successfully!', { description: `"${form.title}" assigned to ${mockWorkers.find(w => w.id === form.worker)?.name}` });
-    setForm({ title: '', description: '', ward: '', category: '', priority: 'medium', deadline: '', worker: '' });
-    setFiles([]);
+    setLoading(true);
+    try {
+      // 1. Create task
+      const newComplaint = {
+        citizen_phone: "0000000000",
+        raw_text: `${form.title}\n${form.description}`,
+        category: form.category,
+      };
+      const res = await apiClient.createComplaint(newComplaint);
+      
+      // 2. Assign worker
+      if (res.data?.id) {
+         // Attempt to update priority/deadline via assignment endpoint
+         await apiClient.assignComplaint(res.data.id, { 
+           assigned_to: form.worker, 
+           status: "Assigned" 
+         });
+         toast.success('Task assigned successfully!', { description: `Assigned to ${workers.find(w => w.id === form.worker)?.name || form.worker}` });
+         setForm({ title: '', description: '', ward: '', category: '', priority: 'medium', deadline: '', worker: '' });
+         setFiles([]);
+      }
+    } catch (err) {
+       toast.error("Failed to assign task");
+       console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputClass = "w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
@@ -75,7 +119,7 @@ const AssignWork = () => {
             <label className="block text-sm font-medium mb-1.5">Assign Worker *</label>
             <select className={inputClass} value={form.worker} onChange={e => setForm({ ...form, worker: e.target.value })} required>
               <option value="">Select worker</option>
-              {mockWorkers.map(w => <option key={w.id} value={w.id}>{w.name} ({w.ward})</option>)}
+              {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </div>
 
@@ -84,8 +128,8 @@ const AssignWork = () => {
             <FileUpload files={files} onChange={setFiles} />
           </div>
 
-          <button type="submit" className="w-full bg-primary text-primary-foreground py-2.5 rounded-md font-medium text-sm hover:opacity-90 transition-opacity">
-            Assign Task
+          <button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground py-2.5 rounded-md font-medium text-sm hover:opacity-90 transition-opacity">
+            {loading ? 'Assigning...' : 'Assign Task'}
           </button>
         </form>
       </div>

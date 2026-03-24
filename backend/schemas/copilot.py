@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+from uuid import UUID
 from datetime import date
 
 class ChatMessage(BaseModel):
@@ -9,7 +10,9 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: List[ChatMessage] = []
-    query_type: str # "data" | "speech" | "media" | "reply"
+    query_type: str # "data" | "speech" | "media" | "reply" | "complaint"
+    complaint_id: Optional[UUID] = None
+
 
 class BriefingSchema(BaseModel):
     date: date

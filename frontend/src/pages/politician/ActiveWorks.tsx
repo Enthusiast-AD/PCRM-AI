@@ -3,7 +3,8 @@ import { PoliticianLayout } from '@/layouts/PoliticianLayout';
 import { WARDS, CATEGORIES } from '@/data/mock';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
-import { Search, MapPin, Calendar, User, X, Sparkles, BrainCircuit } from 'lucide-react';
+import { StatCard } from '@/components/StatCard';
+import { Search, MapPin, Calendar, User, X, Sparkles, BrainCircuit, ClipboardList, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { AIInsightsCard } from '@/components/ai/AIInsightsCard';
 import { useAIChat } from '@/contexts/AIChatContext';
 import { apiClient } from '@/services/apiClient';
@@ -92,6 +93,14 @@ const ActiveWorks = () => {
         </div>
 
         <AIInsightsCard page="active-works" title="Overdue or stalled task alerts" onAskFollowUp={openChat} />
+        
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="Total Tasks" value={tasks.length} icon={ClipboardList} />
+          <StatCard title="In Progress" value={tasks.filter(t => t.status === 'in-progress').length} icon={Clock} />
+          <StatCard title="Pending Review" value={tasks.filter(t => t.status === 'awaiting-approval').length} icon={AlertCircle} />
+          <StatCard title="Completed" value={tasks.filter(t => t.status === 'completed').length} icon={CheckCircle2} />
+        </div>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 flex-wrap">

@@ -1,5 +1,5 @@
 import { PoliticianLayout } from '@/layouts/PoliticianLayout';
-import { mockTasks, WARDS, monthlyCompletions } from '@/data/mock';
+import { WARDS, monthlyCompletions } from '@/data/mock';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend,
@@ -7,6 +7,9 @@ import {
 import { Clock, TrendingUp, XCircle } from 'lucide-react';
 import { AIInsightsCard } from '@/components/ai/AIInsightsCard';
 import { useAIChat } from '@/contexts/AIChatContext';
+import { useState, useEffect } from 'react';
+import { apiClient } from '@/services/apiClient';
+import { Task, TaskStatus, TaskPriority } from '@/types';
 
 const STATUS_COLORS: Record<string, string> = {
   'New': 'hsl(220, 10%, 58%)',
@@ -16,34 +19,66 @@ const STATUS_COLORS: Record<string, string> = {
   'Rejected': 'hsl(0, 72%, 51%)',
 };
 
+const mapPriority = (p: number): TaskPriority => {
+  if (p >= 5) return 'urgent';
+  if (p === 4) return 'high';
+  if (p === 3) return 'medium';
+  return 'low';
+};
+
 const Analytics = () => {
   const { openChat } = useAIChat();
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await apiClient.getComplaints();
+        if (response.data) {
+          setTasks(response.data.map((c: any) => ({
+            id: c.id,
+            title: c.ticket_id,
+            description: c.summary || c.raw_text,
+            ward: c.ward_id || 'Unknown',
+            category: c.category || 'Unclassified',
+            priority: mapPriority(c.priority),
+            status: c.status.toLowerCase() as TaskStatus,
+            createdAt: c.created_at,
+            updatedAt: c.updated_at,
+            completedAt: c.resolved_at,
+          })));
+        }
+      } catch (err) {
+        console.error('Analytics fetch failed', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Pie chart data
   const statusData = [
-    { name: 'New', value: mockTasks.filter(t => t.status === 'new').length },
-    { name: 'In Progress', value: mockTasks.filter(t => t.status === 'in-progress').length },
-    { name: 'Awaiting Approval', value: mockTasks.filter(t => t.status === 'awaiting-approval').length },
-    { name: 'Completed', value: mockTasks.filter(t => t.status === 'completed').length },
-    { name: 'Rejected', value: mockTasks.filter(t => t.status === 'rejected').length },
+    { name: 'New', value: tasks.filter(t => t.status === 'new').length },
+    { name: 'In Progress', value: tasks.filter(t => t.status === 'in-progress').length },
+    { name: 'Awaiting Approval', value: tasks.filter(t => t.status === 'awaiting-approval').length },
+    { name: 'Completed', value: tasks.filter(t => t.status === 'completed').length },
+    { name: 'Rejected', value: tasks.filter(t => t.status === 'rejected').length },
   ].filter(d => d.value > 0);
 
   // Bar chart - tasks by ward
   const wardData = WARDS.map(w => ({
     name: w.split(' - ')[1] || w,
-    total: mockTasks.filter(t => t.ward === w).length,
-    completed: mockTasks.filter(t => t.ward === w && t.status === 'completed').length,
+    total: tasks.filter(t => t.ward === w).length,
+    completed: tasks.filter(t => t.ward === w && t.status === 'completed').length,
   }));
 
   // KPIs
-  const completedTasks = mockTasks.filter(t => t.status === 'completed');
+  const completedTasks = tasks.filter(t => t.status === 'completed');
   const approvedCount = completedTasks.length;
-  const rejectedCount = mockTasks.filter(t => t.status === 'rejected').length;
+  const rejectedCount = tasks.filter(t => t.status === 'rejected').length;
   const totalDecisions = approvedCount + rejectedCount;
   const approvalRate = totalDecisions > 0 ? Math.round((approvedCount / totalDecisions) * 100) : 0;
   const rejectionRate = totalDecisions > 0 ? Math.round((rejectedCount / totalDecisions) * 100) : 0;
 
-  // Avg completion time (mock: random 5-15 days average)
   const avgDays = completedTasks.length > 0
     ? Math.round(completedTasks.reduce((sum, t) => {
         const start = new Date(t.createdAt).getTime();
@@ -140,7 +175,7 @@ const Analytics = () => {
           </div>
         </div>
 
-        {/* Line Chart - Monthly Completions */}
+        {/* Line Chart - Monthly Completions (static reference data) */}
         <div className="stat-card">
           <h3 className="font-semibold mb-4">Works Completed per Month (Last 6 Months)</h3>
           <div className="h-72">
@@ -171,9 +206,9 @@ const Analytics = () => {
             </thead>
             <tbody>
               {WARDS.map(w => {
-                const total = mockTasks.filter(t => t.ward === w).length;
-                const done = mockTasks.filter(t => t.ward === w && t.status === 'completed').length;
-                const ip = mockTasks.filter(t => t.ward === w && t.status === 'in-progress').length;
+                const total = tasks.filter(t => t.ward === w).length;
+                const done = tasks.filter(t => t.ward === w && t.status === 'completed').length;
+                const ip = tasks.filter(t => t.ward === w && t.status === 'in-progress').length;
                 const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                 return (
                   <tr key={w} className="border-b last:border-0">

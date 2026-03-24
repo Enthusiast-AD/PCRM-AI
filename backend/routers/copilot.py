@@ -17,8 +17,27 @@ def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User
     # Fetch real context from DB based on query_type
     context_data = ""
     
-    if request.query_type == "data":
-        # Fetch high-level stats for data queries
+    if request.query_type == "complaint" and request.complaint_id:
+        complaint = db.query(Complaint).filter(Complaint.id == request.complaint_id).first()
+        if complaint:
+            context_data = f"""
+            Complaint Details:
+            Ticket ID: {complaint.ticket_id}
+            Citizen: {complaint.citizen_name} ({complaint.citizen_phone})
+            Category: {complaint.category} / {complaint.subcategory}
+            Priority: {complaint.priority}
+            Status: {complaint.status}
+            Raw Text: {complaint.raw_text}
+            AI Summary: {complaint.summary or 'Not available'}
+            AI Overview: {complaint.ai_overview or 'Not available'}
+            Suggested Action: {complaint.suggested_action or 'Not available'}
+            Suggested Assignee: {complaint.suggested_assignee_role or 'Not available'}
+            """
+        else:
+            context_data = "Complaint not found."
+
+    elif request.query_type == "data":
+        # ... existing code ...
         open_count = db.query(Complaint).filter(
             Complaint.constituency_id == current_user.constituency_id,
             Complaint.status.in_(["New", "Acknowledged", "In Progress"])
@@ -33,7 +52,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User
         context_data = f"Current Constituency Stats: {open_count} total open complaints. {urgent_count} urgent (Priority 5) complaints."
         
     elif request.query_type in ["speech", "media"]:
-        # Fetch recent resolved complaints for positive PR/speeches
+        # ... existing code ...
         thirty_days_ago = datetime.now() - timedelta(days=30)
         resolved_recent = db.query(Complaint.category, func.count(Complaint.id)).filter(
             Complaint.constituency_id == current_user.constituency_id,
@@ -46,6 +65,7 @@ def chat(request: ChatRequest, db: Session = Depends(get_db), current_user: User
 
     response_text = chat_with_data(request.message, request.history, request.query_type, context_data)
     return {"response": response_text}
+
 
 @router.get("/briefing/today", response_model=BriefingResponse)
 def get_briefing_today(db: Session = Depends(get_db), current_user: User = Depends(require_role(["PA", "Politician"]))):

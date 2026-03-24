@@ -13,6 +13,11 @@ class ComplaintCreate(BaseModel):
     photo_url: Optional[str] = None
     category: Optional[str] = "Unclassified"
 
+class ComplaintAssign(BaseModel):
+    assigned_to: UUID
+    status: Optional[str] = "Assigned"
+
+
 class ComplaintResponse(BaseModel):
     id: UUID
     ticket_id: str

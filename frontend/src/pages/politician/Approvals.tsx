@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PoliticianLayout } from '@/layouts/PoliticianLayout';
-import { mockTasks } from '@/data/mock';
 import { StatusBadge } from '@/components/StatusBadge';
 import { MapPin, Calendar, User, CheckCircle2, XCircle, Globe } from 'lucide-react';
 import { toast } from 'sonner';
-import { Task } from '@/types';
+import { Task, TaskStatus, TaskPriority } from '@/types';
+import { apiClient } from '@/services/apiClient';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -15,10 +15,39 @@ import { useAIChat } from '@/contexts/AIChatContext';
 
 const Approvals = () => {
   const { openChat } = useAIChat();
-  const [tasks, setTasks] = useState<Task[]>(mockTasks.filter(t => t.status === 'awaiting-approval'));
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [rejectingTask, setRejectingTask] = useState<Task | null>(null);
   const [rejectFeedback, setRejectFeedback] = useState('');
   const [publishFlags, setPublishFlags] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await apiClient.getComplaints();
+        if (response.data) {
+          const mapped = response.data
+            .filter((c: any) => c.status.toLowerCase() === 'awaiting-approval' || c.status.toLowerCase() === 'awaiting approval')
+            .map((c: any) => ({
+              id: c.id,
+              title: c.ticket_id,
+              description: c.summary || c.raw_text,
+              ward: c.ward_id || 'Unknown',
+              category: c.category || 'Unclassified',
+              priority: 'medium' as TaskPriority,
+              status: 'awaiting-approval' as TaskStatus,
+              createdAt: c.created_at,
+              updatedAt: c.updated_at,
+              completedAt: c.resolved_at,
+              assignedWorkerName: 'Unassigned',
+            }));
+          setTasks(mapped);
+        }
+      } catch (err) {
+        console.error('Approvals fetch failed', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleApprove = (taskId: string) => {
     const shouldPublish = publishFlags[taskId] ?? true;

@@ -24,7 +24,7 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET',
     body?: any
   ): Promise<ApiResponse<T>> {
     try {
@@ -141,30 +141,7 @@ class ApiClient {
     return await response.json();
   }
 
-  // ============ COMPLAINTS ENDPOINTS ============
-  /**
-   * POST /api/v1/complaints
-   * Create a new complaint
-   */
-  async createComplaint(complaintData: any) {
-    return this.request('/api/v1/complaints', 'POST', complaintData);
-  }
-
-  /**
-   * GET /api/v1/complaints
-   * Get complaints (filtered by user role)
-   */
-  async getComplaints() {
-    return this.request('/api/v1/complaints', 'GET');
-  }
-
-  /**
-   * GET /api/v1/complaints/public
-   * Get publicly published complaints
-   */
-  async getPublicComplaints() {
-    return this.request('/api/v1/complaints/public', 'GET');
-  }
+  // End duplicate removed
 
   /**
    * GET /api/v1/complaints/{complaint_id}
@@ -180,6 +157,14 @@ class ApiClient {
    */
   async updateComplaint(complaintId: string, updateData: any) {
     return this.request(`/api/v1/complaints/${complaintId}`, 'PUT', updateData);
+  }
+
+  /**
+   * PATCH /api/v1/complaints/{complaint_id}/assign
+   * Assign a complaint to a field worker
+   */
+  async assignComplaint(complaintId: string, payload: { assigned_to: string; status?: string }) {
+    return this.request(`/api/v1/complaints/${complaintId}/assign`, 'PATCH', payload);
   }
 
   // ============ ANALYTICS ENDPOINTS ============

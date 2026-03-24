@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routers import auth, complaints, analytics, copilot, webhooks, wards
+from routers import auth, complaints, analytics, copilot, webhooks, wards, users
 from utils.database import engine, Base
 import os
 
@@ -24,6 +24,8 @@ app.include_router(analytics.router)
 app.include_router(copilot.router)
 app.include_router(webhooks.router)
 app.include_router(wards.router)
+app.include_router(users.router)
+
 
 @app.get("/health")
 def health_check():
